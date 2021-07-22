@@ -1,0 +1,27 @@
+---
+title: "Data Munging"
+author: "Zachary Himmelberger"
+date: "7/15/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Download Data
+
+We will be using a dataset that contains 
+
+```{r}
+# download from GitHub
+```
+
+
+# Subset Data (get Descriptive Statistics)
+
+# Create New Column (using Mutate)
+
+# Putting it All Together
+
+
