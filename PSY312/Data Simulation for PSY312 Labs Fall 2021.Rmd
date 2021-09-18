@@ -1,0 +1,65 @@
+---
+title: "Data Simulation for PSY312 Labs Fall 2021"
+output: html_notebook
+---
+
+We will be simulating data for three studies, combining the variables into a single dataset, and then saving the results to .csv file. 
+
+Prior to simulating any variables, we will set a random seed. This makes the random number generator begin at the same place each time we run the script. Thus, our results are reproducible. We will also load in the one library we need.
+
+```{r}
+set.seed(312)
+
+library(truncnorm)
+```
+
+We will begin by simulating the demographic information.
+
+  1. gender: participant gender (male, female, non-binary)
+  2. age: participant age
+  
+```{r}
+gender <- sample(c("male", "female", "non-binary"), 
+                 size=100, replace=TRUE, prob=c(.35, .55, .1))
+age <- sample(c(18, 19, 20, 21, 22, 23, 24), 
+              size=100, replace=TRUE, prob=c(.2, .3, .1, .1, .1, .1, .1))
+```
+
+Next, we define the three independent variables.
+
+  1. instructor_gender: instructor gender in Study 1 (male, female)
+  2. budget: shopping budget for participants in Study 2 (small, large)
+  3. facial_expression: facial expression in the picture in Study 3 (nice, angry)
+
+```{r}
+instructor_gender <- c(rep("male", times=50), rep("female", times=50))
+budget <- c(rep("small", times=50), rep("large", times=50))
+facial_expression <- c(rep("nice", times=50), rep("angry", times=50))
+```
+
+Finally, we will define the dependent variables. Note that we will use the same dependent variable in 
+
+  1. impression: the overall impression of the instructor in Study 1 and the overall impression of the person in Study 3 (1-5 with 5 indicating a better impression)
+  2. store_brand: number of store-brand items bought in Study 2 (0-20)
+  3. ratio: ratio of store-brand items to name-brand items in Study 2 (0-1)
+
+```{r}
+impression <- round(c(rtruncnorm(n=50, a=1, b=5, mean=3.85, sd=1), 
+                rtruncnorm(n=50, a=1, b=5, mean=3.05, sd=1)), 2)
+store_brand <- c(rbinom(n=50, size=20, prob=.25), rbinom(n=50, size=20, prob=.1))
+ratio <- round(store_brand / 20, 2)
+```
+
+Now we can put all of the variables into our dataset. 
+
+```{r}
+df <- data.frame(gender, age, instructor_gender, budget, 
+                 facial_expression, impression, store_brand, ratio)
+```
+
+Finally, we can save the results as a csv file. If you want to run this code chunk, you must change the file path to one on your computer. 
+
+```{r}
+filepath <- "/Users/zach.himmelberger/OneDrive - Maryville College/Teaching/GitHub/Maryville College/PSY312/PSY312_lab_data.csv"
+write.csv(df, file=filepath, row.names=FALSE)
+```

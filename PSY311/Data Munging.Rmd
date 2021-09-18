@@ -9,19 +9,325 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Download Data
+# Load Libraries
 
-We will be using a dataset that contains 
+As we will see throughout this tutorial, there are often several ways to accomplish the same task. I will show two methods for each task. First, I will use base R. This means you will not need to load in any packages. Second, I will use **tidyverse**, which is a comprehensive package for working with data.
 
 ```{r}
-# download from GitHub
+library(tidyverse)
 ```
 
+# Load and Explore Data
 
-# Subset Data (get Descriptive Statistics)
+We will be working with a dataset that contains survey responses from 79 people. The survey consisted of 8 items that assess extroversion. In this tutorial, we will prepare this dataset for analysis. The process of preparing data is sometimes referred to as cleaning or munging the data.
 
-# Create New Column (using Mutate)
+The data is located on GitHub. You can access the data by copying the code below.
+
+```{r}
+# get data from GitHub
+data_URL <- 'https://raw.githubusercontent.com/ZacharyHimmelberger/Maryville-College/main/PSY311/BFI.csv'
+
+df <- read.csv(data_URL, na.strings = c(''))
+```
+
+We should start by exploring the data. It is very helpful to look at the dataframe to amke sure everything was loaded in a reasonable way. 
+
+```{r}
+# view the dataframe
+View(df)
+```
+
+Everything looks like it was loaded correctly. Right away, we see that the column names are a bit awkward and we have a few missing values. We can look at the structure of the dataframe to see the data type for each column.
+
+```{r}
+str(df)
+```
+
+We can see that the data type is a character (called a string in many other programming languages) for each of the items. It is typical to average together the item responses to get an overall extroversion score. In order to do this, we will need to complete the following steps:
+  1. rename the columns (this is not strictly necessary, but it can be useful for some datasets)
+  2. convert the scores to numerical values
+  3. reverse score the negatively worded items
+  4. decide what to do about the missing values
+  5. create a new column that is the average of all the items
+
+The **glimpse** function in **tidyverse** provides a similar output as the **str** function, but the output is easier to read. 
+
+```{r}
+glimpse(df)
+```
+
+# Renaming Columns
+
+We often refer to a specific variable (or column) in the dataset by name. Thus, it is helpful if we have short, simple but descriptive names for all of our columns. This is especially relevant when you load a dataset in from a survey and the column names are the full question (which is what we have here).
+
+In order to do this, it is helpful to learn two facts. First, we access the column names using the **colnames** function. Second, we can refer to the columns by their index (i.e., position) in the dataframe. For instance, `r df[1]` will return a dataframe that contains only the first column. Likewise, `r df[2:4]` returns a dataframe with the second through fourth columns, inclusive. We can use this fact to change specific column names. 
+
+As an example, let's create a new dataframe with columns 2 to 4 renamed. 
+
+```{r}
+# create a copy of df
+df_new_column_names <- df
+
+# rename columns
+colnames(df_new_column_names)[2:4] <- c("reserved", "energy", "disorganized")
+
+# view new column names
+colnames(df_new_column_names)
+```
+
+We can do the same thing using **tidyverse**, though notice we use the old column name instead of the columns index.
+
+```{r}
+# rename columns (but not saving the result)
+
+df %>%
+  rename(reserved = is.reserved., # new = old
+         energy = is.full.of.energy.,
+         disorganized = tends.to.be.disorganized.)
+```
+
+Generally, I find it easier to use the base R method if I am changing many column names, but the **tidyverse** method when I am changing fewer column names. 
+
+I won't actually change the column names in the original dataframe for the purposes of this tutorial. 
+
+# Convert Data Type
+
+Now we want to convert the scores to be numerical values. Currently, our data is a character data type. The original measure used a 5-point Likert scale with options: strongly disagree, disagree, neutral, agree, strongly agree. We can choose the appropriate way to code this numerically. There are infinitely many options. Here are two options:
+
+Option 1:
+strongly disagree = 1
+disagree = 2
+neutral = 3
+agree = 4
+strongly agree = 5
+
+Option 2: 
+strongly disagree = -2
+disagree = -1
+neutral = 0
+agree = 1
+strongly agree = 2
+
+I think Option 1 is much more common, though I may prefer option 2 in some circumstances. Of course, most measures have with a prescribed way to code the data, though we are not required to follow that method. Because it is much more common, we will use Option 1, though the method extends to any coding scheme you choose. We will recode all 8 columns.  
+
+Using base R, we can select the columns that we want to recode and then recode each value separately. In this case, I want to recode all of the columns. However, in a typical situation, you only want to recode some of the columns. Therefore, for pedagogical reasons, I will explicitly refer to the columns by their index rather than just apply the transformation to the entire dataframe.  
+
+```{r}
+# create a copy of df
+df_recoded <- df
+
+# recode one value at a time
+df_recoded[1:8][df[1:8] == "strongly disagree"] <- 1
+df_recoded[1:8][df[1:8] == "disagree"] <- 2
+df_recoded[1:8][df[1:8] == "neutral"] <- 3
+df_recoded[1:8][df[1:8] == "agree"] <- 4
+df_recoded[1:8][df[1:8] == "strongly agree"] <- 5
+
+# view new dataframe
+head(df_recoded)
+```
+
+There are ways to make the above code one line, but the resulting code is difficult to read and understand. 
+
+This process is much easier using **tidyverse**.
+
+```{r}
+df %>% 
+  mutate_at(.vars = c(1:8), 
+            .funs = recode, 
+              "strongly disagree" = 1, # old = new
+              "disagree" = 2,
+              "neutral" = 3,
+              "agree" = 4,
+              "strongly agree" = 5) 
+```
+
+If we want to recode all of the columns in our dataframe using **tidyverse**, we can do the following. 
+
+```{r}
+df %>% 
+  mutate_all(recode, 
+         "strongly disagree" = 1, # old = new
+         "disagree" = 2,
+         "neutral" = 3,
+         "agree" = 4,
+         "strongly agree" = 5) 
+```
+
+It is almost always easier to use **tidyverse** when recoding variables. 
+
+# Reverse Score Values
+
+We want to combine the items so that a higher score indicates higher extroversion. However, some items are worded so that a strongly agree response indicates higher extroversion and other items such that it indicates less extroversion. Thus, we need to recode the values to be consistent.
+
+Columns 1, 3, 4, 6 and 8 indicate higher extroversion. Columns 2, 5, and 7 indicate lower extroversion.
+
+It turns out, the method we used above to recode our values from character to numerical values can be used to recode negatively worded items. Notice how I will group the postiviely worded items together and simply use the above procedure. Then, I will group the negatively worded items together and use the above procedure but with new values. 
+
+In base R, we can do the following.
+
+```{r}
+# create a copy of df
+df_recoded_example_two <- df
+
+# recode positively worded items (same as above)
+df_recoded_example_two[c(1, 3, 4, 6, 8)][df[c(1, 3, 4, 6, 8)] == "strongly disagree"] <- 1
+df_recoded_example_two[c(1, 3, 4, 6, 8)][df[c(1, 3, 4, 6, 8)] == "disagree"] <- 2
+df_recoded_example_two[c(1, 3, 4, 6, 8)][df[c(1, 3, 4, 6, 8)] == "neutral"] <- 3
+df_recoded_example_two[c(1, 3, 4, 6, 8)][df[c(1, 3, 4, 6, 8)] == "agree"] <- 4
+df_recoded_example_two[c(1, 3, 4, 6, 8)][df[c(1, 3, 4, 6, 8)] == "strongly agree"] <- 5
+
+# recode negatively worded items
+df_recoded_example_two[c(2, 5, 7)][df[c(2, 5, 7)] == "strongly disagree"] <- 5
+df_recoded_example_two[c(2, 5, 7)][df[c(2, 5, 7)] == "disagree"] <- 4
+df_recoded_example_two[c(2, 5, 7)][df[c(2, 5, 7)] == "neutral"] <- 3
+df_recoded_example_two[c(2, 5, 7)][df[c(2, 5, 7)] == "agree"] <- 2
+df_recoded_example_two[c(2, 5, 7)][df[c(2, 5, 7)] == "strongly agree"] <- 1
+
+# view new dataframe
+head(df_recoded)
+```
+
+Using **tidyverse**, we can do the same thing. 
+
+```{r}
+df %>% 
+  mutate_at(.vars = c(1, 3, 4, 6, 8), 
+            .funs = recode, 
+              "strongly disagree" = 1, # old = new
+              "disagree" = 2,
+              "neutral" = 3,
+              "agree" = 4,
+              "strongly agree" = 5) %>%
+  mutate_at(.vars = c(2, 5, 7), 
+            .funs = recode, 
+              "strongly disagree" = 5, # old = new
+              "disagree" = 4,
+              "neutral" = 3,
+              "agree" = 2,
+              "strongly agree" = 1) 
+```
+
+An alternative approach to recoding negatively worded numerical values is to take advantage a mathematical trick. If we want to recode a 5 to a 1, 4 to a 2, and so on, we can subtract one more than the maximum value (in our case this is $1 + 5 = 6$) from each score. For instance, $6 - 5 = 1$, $6 - 4 = 2$, etc. I will not demonstrate this, but it can be done in base R or **tidyverse** using the same tools you have already learned. 
+
+# Deal with Missing Data
+
+Now that we have converted the data to a numerical scale, we must decide what to do with the missing data. First, let's see how many values are missing. 
+
+We can first look at each column and count the number of missing values. 
+
+```{R}
+apply(is.na(df), MARGIN = 2, FUN = sum)
+```
+
+Given that we have data from 79 participants, a maximum of 3 missing values in any one column is very good. 
+
+Next, we should look at each participant and see how many missing values they have. 
+
+```{R}
+apply(is.na(df), MARGIN = 1, FUN = sum)
+```
+
+We can see that we have one participant who has 6 missing values. No one else has more than one missing value. 
+
+We have several options for how to handle missing data. We will not be covering the theory behind different approaches. Instead, I will briefly comment on the three most common approaches. 
+
+The first approach is to only use the cases (i.e., rows) where the participant has no missing data on any of the variables of interest. In our case, this would mean removing the 10 participants who have at least one missing value. Generally, this approach removes too much data. 
+
+```{r}
+# create new dataframe that only contains complete cases
+
+# base R
+no_missing_df <- na.omit(df)
+
+# tidyverse
+df %>% 
+  drop_na()
+```
+
+The second approach is to only remove cases that have substantial missing data. To do this, we set a minimum on the amount of missing data we will accept and remove cases that have more values missing. To see an example, let's reject all cases that have more than four of the eight items missing. 
+
+```{r}
+# create new dataframe removing only cases with more than four missing values
+
+# base R
+some_missing_df <- df[apply(is.na(df), MARGIN = 1, FUN = sum) <= 4, ]
+
+# tidyverse
+df %>% 
+  mutate(missing_values = rowSums(is.na(.))) %>%
+  filter(missing_values <= 4)
+```
+
+The final approach is to ignore the problem. This is not as bad as it sounds. We can simply move forward by averaging all of the columns that don't contain missing values. We will use this approach in the next section. However, you can imagine that this solution is problematic if we have many participants with several missing values. 
+
+# Create New Column 
+
+We can finally calculate the mean of several numeric columns. We will ignore missing values. So, if a person provided 7 responses, then we will simply average those 7 and ignore the final response. 
+
+I will start by creating a new dataframe using the tidyverse method from above.
+
+```{r}
+new_df <- df %>% 
+  mutate_at(.vars = c(1, 3, 4, 6, 8), 
+            .funs = recode, 
+              "strongly disagree" = 1, # old = new
+              "disagree" = 2,
+              "neutral" = 3,
+              "agree" = 4,
+              "strongly agree" = 5) %>%
+  mutate_at(.vars = c(2, 5, 7), 
+            .funs = recode, 
+              "strongly disagree" = 5, # old = new
+              "disagree" = 4,
+              "neutral" = 3,
+              "agree" = 2,
+              "strongly agree" = 1) 
+```
+
+Using base R, we can calculate an average score for these 8 columns using the following code. Similar to above, I will explicitly identify the columns by their index. This is not necessary for our purpose, but is done for pedagogical reasons. 
+
+```{r}
+# create a new column for the mean response on the 8 
+new_df$base_R_mean <- rowMeans(new_df[1:8], na.rm = TRUE)
+```
+
+In **tidyverse**, we will use the **mutate** function that we've seen above. 
+
+```{r}
+new_df %>%
+  rowwise() %>%
+  mutate(tidy_mean = mean(c_across(1:8), na.rm = TRUE))
+```
+
+However, I prefer a combination of base R and **tidyverse**. 
+
+```{r}
+new_df$tidy_mean <- new_df %>%
+  rowMeans(., na.rm = TRUE)
+```
 
 # Putting it All Together
+
+We can now see how we can use all of these **tidyverse** techniques to prepare our dataframe for analysis.
+
+```{r}
+df <- df %>% 
+  mutate_at(.vars = c(1, 3, 4, 6, 8), 
+            .funs = recode, 
+              "strongly disagree" = 1, # old = new
+              "disagree" = 2,
+              "neutral" = 3,
+              "agree" = 4,
+              "strongly agree" = 5) %>%
+  mutate_at(.vars = c(2, 5, 7), 
+            .funs = recode, 
+              "strongly disagree" = 5, # old = new
+              "disagree" = 4,
+              "neutral" = 3,
+              "agree" = 2,
+              "strongly agree" = 1) %>%
+  mutate(tidy_mean = rowMeans(., na.rm = TRUE))
+```
 
 
